@@ -29,6 +29,9 @@ class LWLR(nn.Module):
     def get_curr_tangent_line(self, domain):
         return [self.theta.T @ np.concatenate([np.ones((1, 1)), np.array([[x]])], axis=1).T for x in domain]
 
+    def get_curve(self, domain):
+        return [self.forward(x, X, Y) for x in domain]
+
     def fit(self, X, Y, W):
         # print(X.shape)
         # print(W.shape)
@@ -76,10 +79,18 @@ if __name__ == '__main__':
         print("output: ", y_output.item())
         y_outputs.append(y_output.item())
         x_plot = np.linspace(0, 35, 30)
+
+        # plot the tangent line being learned at the test x_input
         y_plot = np.array(model.get_curr_tangent_line(x_plot)).squeeze()
         plt.plot(x_plot, y_plot, '-')
 
     plt.plot(x_inputs, y_outputs, 'x')
+
+    # plot curve
+    x_plot = np.linspace(0, 35, 50)
+    y_plot = np.array(model.get_curve(x_plot)).squeeze()
+    plt.plot(x_plot, y_plot, '--')
+
     plt.title('Locally Weighted Linear Regression')
     plt.xlabel('x')
     plt.ylabel('y')
