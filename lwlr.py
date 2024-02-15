@@ -1,46 +1,29 @@
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import math
+import matplotlib.pyplot as plt
 
 
 class LWLR(nn.Module):
-    def __init__(self, D, kernel_fn):
+    def __init__(self, d, kernel_fn):
         super(LWLR, self).__init__()
-        self.D = D
-        self.theta = np.zeros((D, 1))
-        self.linear = nn.Linear(D, 1, bias=True)
+        self.d = d
+        self.theta = np.zeros((d, 1))
         self.kernel_fn = kernel_fn
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
 
-    def forward(self, x, X, Y):
-        W = self.kernel_fn.forward(x, X)
-        self.fit(X, Y, W, 100)
-        return self.linear(X)
+    def forward(self, x_input, X, Y):
+        W = self.kernel_fn.get_weights(x_input, X)
+        self.fit(X, Y, W)
+        # print(self.theta.shape)
+        return self.theta.T@x_input
 
-    def fit(self, X, Y, W, epochs):
-
-        self.train()
-        prev_loss = 0
-        for epoch in range(epochs):
-
-            self.optimizer.zero_grad()
-            l = self.loss(X, Y, W)
-
-            l.backward()
-            self.optimizer.step()
-
-            with torch.no_grad():
-                self.final_epoch += 1
-                print('Epoch %d/%d, Avg Loss (Risk): %.4f' % (epoch, epochs, l))
-
-        print('*********************** Done training all epochs ***********************')
-
-    def loss(self, X, Y, W):
-        res = np.multiply(W, np.sum(Y-self.linear(X)))
-        res = np.sum(res)
-        return res
+    def fit(self, X, Y, W):
+        # print(X.shape)
+        # print(W.shape)
+        # print(Y.shape)
+        theta = np.linalg.inv(X.T@W@X)@(X.T@W@Y)
+        self.theta = theta
 
 
 class GaussianKernel:
@@ -48,10 +31,46 @@ class GaussianKernel:
         self.mu = mu
         self.sigma = sigma
 
-    def forward(self, x_input, X):
-        # x_input = (1, D), x_input is the x value for which I want to predict for
-        # X = (N, D)
+    def get_weights(self, x_input, X):
+        # x_input = (1, D)
+        # x = (N, D)
         # N is the number of data samples in the training set
         # D is the dimensions of the data
-        return math.exp(-1.0*(np.abs(x_input-X)**2))
+        # want to output (N, N)
+        N = X.shape[0]
+        weights = np.exp(-1.0*(np.abs(x_input-X)**2)).flatten()
+        weights = np.diag(weights)
+        weights.reshape((N, N))
+        # print('shape of W: ', weights.shape)
+        return weights
 
+
+if __name__ == '__main__':
+    d = 1
+    X = np.array([[1], [1], [2], [4], [4], [5], [10], [10], [11]])
+    Y = np.array([[1], [2], [1], [6], [8], [7], [3], [4], [3.5]])
+    plt.plot(X, Y, 'o')
+
+    x_inputs = [3, 10.5, 15]
+    y_outputs = []
+
+    kernel = GaussianKernel(0, 1)
+    model = LWLR(d, kernel)
+
+    for x_input in x_inputs:
+        y_output = model([[x_input]], X, Y)
+        y_outputs.append(y_output.item())
+        x_plot = np.linspace(0, 20, 30)
+        # print(x_plot.shape)
+        y_plot = []
+        for x in x_plot:
+            y_plot.append(model([[x_input]], X, Y).item())
+        y_plot = np.array(y_plot)
+
+        plt.plot(x_plot, y_plot, '-')
+
+    plt.plot(x_inputs, y_outputs, 'x')
+    plt.title('Locally Weighted Linear Regression')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.show()
