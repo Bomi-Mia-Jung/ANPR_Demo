@@ -6,17 +6,28 @@ import matplotlib.pyplot as plt
 
 
 class LWLR(nn.Module):
-    def __init__(self, d, kernel_fn):
+    def __init__(self, d, kernel):
         super(LWLR, self).__init__()
         self.d = d
         self.theta = np.zeros((d, 1))
-        self.kernel_fn = kernel_fn
+        self.kernel = kernel
 
     def forward(self, x_input, X, Y):
-        W = self.kernel_fn.get_weights(x_input, X)
+        X_bias = np.ones((X.shape[0], 1))
+        X = np.concatenate([X_bias, X], axis=1)
+
+        kern_fn = kernel(mu=x_input, sigma=4)
+        x_input = np.array([[x_input]])
+        x_bias = np.ones((1, 1))
+        x_input = np.concatenate([x_bias, x_input], axis=1)
+        # print('x_input shape after bias concat: ', x_input.shape)
+
+        W = kern_fn.get_weights(x_input, X)
         self.fit(X, Y, W)
-        # print(self.theta.shape)
-        return self.theta.T@x_input
+        return self.theta.T @ x_input.T
+
+    def get_curr_tangent_line(self, domain):
+        return [self.theta.T @ np.concatenate([np.ones((1, 1)), np.array([[x]])], axis=1).T for x in domain]
 
     def fit(self, X, Y, W):
         # print(X.shape)
@@ -38,39 +49,39 @@ class GaussianKernel:
         # D is the dimensions of the data
         # want to output (N, N)
         N = X.shape[0]
-        weights = np.exp(-1.0*(np.abs(x_input-X)**2)).flatten()
+        x_input = np.repeat(x_input, N, axis=0)  # (N, D)
+        weights = np.exp(-1.0*(np.linalg.norm(x_input-X, axis=1)**2)/(2*(self.sigma**2))).flatten()
         weights = np.diag(weights)
         weights.reshape((N, N))
         # print('shape of W: ', weights.shape)
+        # weights = np.eye(N)
         return weights
 
 
 if __name__ == '__main__':
     d = 1
     X = np.array([[1], [1], [2], [4], [4], [5], [10], [10], [11]])
-    Y = np.array([[1], [2], [1], [6], [8], [7], [3], [4], [3.5]])
+    Y = np.array([[1], [2], [1], [6], [7], [7], [3], [4], [3.5]])
     plt.plot(X, Y, 'o')
 
-    x_inputs = [3, 10.5, 15]
+    x_inputs = [3, 10.5, 25]
     y_outputs = []
 
-    kernel = GaussianKernel(0, 1)
+    kernel = GaussianKernel
     model = LWLR(d, kernel)
 
     for x_input in x_inputs:
-        y_output = model([[x_input]], X, Y)
+        print("input: ", x_input)
+        y_output = model(x_input, X, Y)
+        print("output: ", y_output.item())
         y_outputs.append(y_output.item())
-        x_plot = np.linspace(0, 20, 30)
-        # print(x_plot.shape)
-        y_plot = []
-        for x in x_plot:
-            y_plot.append(model([[x_input]], X, Y).item())
-        y_plot = np.array(y_plot)
-
+        x_plot = np.linspace(0, 35, 30)
+        y_plot = np.array(model.get_curr_tangent_line(x_plot)).squeeze()
         plt.plot(x_plot, y_plot, '-')
 
     plt.plot(x_inputs, y_outputs, 'x')
     plt.title('Locally Weighted Linear Regression')
     plt.xlabel('x')
     plt.ylabel('y')
+    plt.ylim((0, 20))
     plt.show()
