@@ -147,7 +147,7 @@ class DraggablePlot(object):
     def _add_point(self, x, y=None):
         if y is None:
             if isinstance(x, MouseEvent):
-                x, y = int(x.xdata), int(x.ydata)
+                x, y = x.xdata, x.ydata
                 point = self.TrPoint(x=x, y=y)
                 self._points.append(point)
                 return point
@@ -168,7 +168,7 @@ class DraggablePlot(object):
 
     def _edit_point(self, point, x, y=None):
         if isinstance(x, MouseEvent):
-            x, y = int(x.xdata), int(x.ydata)
+            x, y = x.xdata, x.ydata
             dist = math.hypot(x - point.init_x, y - point.init_y)
 
             if dist <= self._r:
@@ -196,6 +196,17 @@ class DraggablePlot(object):
             return nearest_point
         return None
 
+    def _draw_bound_circle(self, point):
+        # Draw a red circle indicating the allowed movement radius around the point
+        if point.init_x is None or point.init_y is None:
+            return
+        if hasattr(self, '_radius_circle'):
+            self._radius_circle.remove()
+        radius = self._r
+        circle = plt.Circle((point.init_x, point.init_y), radius, color='red', fill=False)
+        self._axes.add_patch(circle)
+        self._radius_circle = circle
+
     def _on_click(self, event):
         """ callback method for mouse click event
         :type event: MouseEvent
@@ -222,6 +233,11 @@ class DraggablePlot(object):
         """
         if event.button == 1 and event.inaxes in [self._axes] and self._dragging_point:
             self._dragging_point = None
+            """
+            Add some way to remove the circle every time it is released :O
+            """
+            # if hasattr(self, '_radius_circle'):
+            #     self._radius_circle.remove()  # Remove the red circle
             self._update_plot()
 
     def _on_motion(self, event):
@@ -233,4 +249,5 @@ class DraggablePlot(object):
         if event.xdata is None or event.ydata is None:
             return
         self._edit_point(self._dragging_point, event)
+        self._draw_circle(self._dragging_point)
         self._update_plot()
