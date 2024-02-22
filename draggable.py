@@ -101,33 +101,33 @@ class DraggablePlot(object):
             for x_test in self._test_points:
                 x_test.local_line = None
         else:
-            init_X = [point.init_x for point in self._points]
-            init_Y = [point.init_y for point in self._points]
+            init_X = []
+            init_Y = []
             X = [point.x for point in self._points]
             Y = [point.y for point in self._points]
 
             # Add new plot
             if not self._scatterplot:
+                init_X = [point.init_x for point in self._points]
+                init_Y = [point.init_y for point in self._points]
                 self._init_scatterplot, = self._axes.plot(init_X, init_Y, 'go', markersize=4)
                 self._scatterplot, = self._axes.plot(X, Y, 'ro', markersize=4)
             # Update current plot
             else:
-                self._init_scatterplot.set_data(init_X, init_Y)
                 self._scatterplot.set_data(X, Y)
 
-            init_X = np.array([[x] for x in init_X])
-            init_Y = np.array([[y] for y in init_Y])
             X = np.array([[x] for x in X])
             Y = np.array([[y] for y in Y])
             x_plot = np.linspace(self._domain[0], self._domain[1], (self._domain[1]-self._domain[0])*2)
             y_plot = np.array(self._model.get_curve(x_plot, X, Y)).squeeze()
-            y_init_plot = np.array(self._model.get_curve(x_plot, init_X, init_Y)).squeeze()
 
             if not self._curve:
-                self._init_curve, = self._axes.plot(x_plot, y_init_plot, 'g--')
                 self._curve, = self._axes.plot(x_plot, y_plot, 'r--')
+                init_X = np.array([[x] for x in init_X])
+                init_Y = np.array([[y] for y in init_Y])
+                y_plot = np.array(self._model.get_curve(x_plot, init_X, init_Y)).squeeze()
+                self._init_curve, = self._axes.plot(x_plot, y_plot, 'g--')
             else:
-                self._init_curve.set_data(x_plot, y_init_plot)
                 self._curve.set_data(x_plot, y_plot)
 
             if self._test_points:
