@@ -6,9 +6,10 @@ import matplotlib.pyplot as plt
 
 
 class LWLR(nn.Module):
-    def __init__(self, d, kernel, bandwidth):
+    def __init__(self, d, kernel, bandwidth, lbda):
         super(LWLR, self).__init__()
         self.d = d
+        self.lbda = lbda
         self.theta = np.zeros((d, 1))
         self.kernel = kernel
         self.bandwidth = bandwidth
@@ -52,7 +53,7 @@ class LWLR(nn.Module):
         # print(X.shape)
         # print(W.shape)
         # print(Y.shape)
-        theta = np.linalg.inv(X.T@W@X)@(X.T@W@Y)
+        theta = np.linalg.inv(X.T@W@X + self.lbda*np.identity(self.d))@(X.T@W@Y)
         self.theta = theta
         return self.theta
 
@@ -88,7 +89,7 @@ if __name__ == '__main__':
     y_outputs = []
 
     kernel = GaussianKernel
-    model = LWLR(d, kernel, 2)
+    model = LWLR(d, kernel, 2, lbda=0)
 
     for x_input in x_inputs:
         # print("input: ", x_input)
