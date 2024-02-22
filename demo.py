@@ -14,13 +14,14 @@ from draggable import DraggablePlot
 
 
 if __name__ == '__main__':
+
     # plt.ion()
 
     d = 1  # dimensions of X
     r = 2  # radius of circle within which you can move each data point
 
-    domain = (0, 30)
-    range = (0, 20)
+    x_range = (0, 30)
+    y_range = (0, 20)
 
     # training data
     X = [1., 1., 2., 4., 4., 5., 10., 10., 11.]
@@ -33,4 +34,5 @@ if __name__ == '__main__':
     kernel = GaussianKernel  # kernel function to use for weights
     model = LWLR(d, kernel, 2, lbda=0)  # initialize locally weighted lin reg model
 
-    my_plot = DraggablePlot(points=data, test_points=test_x, r=r, domain=domain, range=range, title="ANPR Interactive Demo", model=model)
+    my_plot = DraggablePlot(points=data, test_points=test_x, r=r, domain=x_range, range=y_range, title="ANPR Interactive Demo", model=model)
+
