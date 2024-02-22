@@ -31,6 +31,6 @@ if __name__ == '__main__':
     data = tuple(zip(X, Y))
 
     kernel = GaussianKernel  # kernel function to use for weights
-    model = LWLR(d, kernel, 2)  # initialize locally weighted lin reg model
+    model = LWLR(d, kernel, 2, lbda=0)  # initialize locally weighted lin reg model
 
     my_plot = DraggablePlot(points=data, test_points=test_x, r=r, domain=domain, range=range, title="ANPR Interactive Demo", model=model)
