@@ -196,7 +196,7 @@ class DraggablePlot(object):
             return nearest_point
         return None
 
-    def _draw_circle(self, point):
+    def _draw_bound_circle(self, point):
         # Draw a red circle indicating the allowed movement radius around the point
         if point.init_x is None or point.init_y is None:
             return
