@@ -1,4 +1,7 @@
 """ code base courtesy of: https://github.com/yuma-m/matplotlib-draggable-plot/tree/master """
+import matplotlib
+# matplotlib.use('TkAgg')  # useful backend if you're using Windows
+from matplotlib.widgets import Slider
 
 import math
 import numpy as np
@@ -7,8 +10,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseEvent
 
 from lwlr import LWLR, GaussianKernel
-
-
 class DraggablePlot(object):
     """ An example of plot with draggable markers """
 
@@ -33,6 +34,9 @@ class DraggablePlot(object):
 
         self._domain = domain
         self._range = range
+
+        self._radius_slider_axes = None
+        self._radius_slider = None
 
         self._r = float(r)
 
@@ -89,6 +93,19 @@ class DraggablePlot(object):
         self._figure.canvas.mpl_connect('button_press_event', self._on_click)
         self._figure.canvas.mpl_connect('button_release_event', self._on_release)
         self._figure.canvas.mpl_connect('motion_notify_event', self._on_motion)
+
+        self._radius_slider_axes = plt.axes([self._domain[0] + 0.15, self._range[0], 0.75, 0.04])
+                                        # ([slider_x, slider_y, slider_length, silder_thickness])
+        self._radius_slider = Slider(self._radius_slider_axes, 'Radius', 0.5, 6.0)
+        self._radius_slider.on_changed(self._update_radius)
+
+    def _update_radius(self, val):
+        self._r = val
+        if hasattr(self, '_radius_circle') and self._radius_circle:
+            self._radius_circle.set_radius(self._r)
+            # please leave self.r as argument of set_radius.
+            # without this set_radius function, the radius slider feature doesn't work!
+            self._figure.canvas.draw_idle()
 
     def _init_model(self):
         kernel = GaussianKernel
@@ -222,6 +239,7 @@ class DraggablePlot(object):
         """ callback method for mouse click event
         :type event: MouseEvent
         """
+
         # left click
         if event.button == 1 and event.inaxes in [self._axes]:
             point = self._find_neighbor_point(event)
@@ -242,6 +260,7 @@ class DraggablePlot(object):
         """ callback method for mouse release event
         :type event: MouseEvent
         """
+
         if event.button == 1 and event.inaxes in [self._axes] and self._dragging_point:
             self._dragging_point = None
             """
