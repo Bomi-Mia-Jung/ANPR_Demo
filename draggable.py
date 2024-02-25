@@ -30,7 +30,7 @@ class DraggablePlot(object):
             self.local_line = line
 
     def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5, title="Draggable Plot", model=None):
-        self._figure, self._axes, self._init_scatterplot, self._scatterplot, self._test_plot, self._init_curve, self._curve = None, None, None, None, None, None, None
+        self._figure, self._axes, self._init_scatterplot, self._scatterplot, self._test_plot, self._init_curve, self._curve, self._radius_circle = None, None, None, None, None, None, None, None
 
         self._domain = domain
         self._range = range
@@ -228,10 +228,11 @@ class DraggablePlot(object):
         # Draw a red circle indicating the allowed movement radius around the point
         if point.init_x is None or point.init_y is None:
             return
-        if hasattr(self, '_radius_circle'):
+        
+        if self._radius_circle is not None:
             self._radius_circle.remove()
         radius = self._r
-        circle = plt.Circle((point.init_x, point.init_y), radius, color='red', fill=False)
+        circle = plt.Circle((point.init_x, point.init_y), radius, color=(1,0.7,0.7), fill=True)
         self._axes.add_patch(circle)
         self._radius_circle = circle
 
@@ -266,8 +267,9 @@ class DraggablePlot(object):
             """
             Add some way to remove the circle every time it is released :O
             """
-            # if hasattr(self, '_radius_circle'):
-            #     self._radius_circle.remove()  # Remove the red circle
+            if hasattr(self, '_radius_circle'):
+                self._radius_circle.remove()  # Remove the red circle
+                self._radius_circle = None  # Set the attribute to None after removal
             self._update_plot()
 
     def _on_motion(self, event):
