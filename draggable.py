@@ -25,7 +25,7 @@ class DraggablePlotTr(object):
                 self.y = float(y)
 
     class TePoint:
-        def __init__(self, x, y, line=None):
+        def __init__(self, x, y, line):
             self.init_x = x
             self.init_y = y
             self.x = x
@@ -34,7 +34,7 @@ class DraggablePlotTr(object):
             self.local_line = line
 
     def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5, title="Draggable Plot", model=None):
-        self._figure, self._axes, self._scatterplot, self._test_plot, self._curve, self._radius_circle = None, None, None, None, None, None
+        self._figure, self._axes, self._init_scatterplot, self._scatterplot, self._test_plot, self._init_curve, self._curve, self._radius_circle = None, None, None, None, None, None, None, None
 
         self._domain = domain
         self._range = range
