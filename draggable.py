@@ -357,6 +357,8 @@ class DraggablePlotTe(DraggablePlotTr):
                 if not test_point.init_local_line:
                     line, = self._axes.plot(x_plot, y_plot, 'g-', label=('local line before attack at x={}'.format(test_point.x)))
                     test_point.init_local_line = line
+                else:
+                    test_point.init_local_line.set_data(x_plot, y_plot)
 
                 y_plot = np.array(self._model.get_local_line(test_point.x, changed_X, init_Y, x_plot)).squeeze()
 
