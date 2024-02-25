@@ -10,8 +10,11 @@ import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseEvent
 
 from lwlr import LWLR, GaussianKernel
-class DraggablePlot(object):
-    """ An example of plot with draggable markers """
+from attack import TrTimeAttackOnX
+
+
+class DraggablePlotTr(object):
+    """ A plot with draggable training set """
 
     class TrPoint:
         def __init__(self, x, y=None):
@@ -22,14 +25,15 @@ class DraggablePlot(object):
                 self.y = float(y)
 
     class TePoint:
-        def __init__(self, x, y, line):
+        def __init__(self, x, y, line=None):
             self.init_x = x
             self.init_y = y
             self.x = x
             self.y = y
+            self.init_local_line = line
             self.local_line = line
 
-    def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5, title="Draggable Plot", model=None):
+    def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5., title="Draggable Plot", model=None):
         self._figure, self._axes, self._init_scatterplot, self._scatterplot, self._test_plot, self._init_curve, self._curve = None, None, None, None, None, None, None
 
         self._domain = domain
@@ -61,7 +65,7 @@ class DraggablePlot(object):
         self._test_points = []  # list of TestPoint instances
         if test_points:
             for x_input in test_points:
-                self._test_points.append(self.TePoint(x_input, None, None))
+                self._test_points.append(self.TePoint(x_input, None))
 
         self._update_plot()
 
@@ -281,3 +285,149 @@ class DraggablePlot(object):
         self._edit_point(self._dragging_point, event)
         self._draw_circle(self._dragging_point)
         self._update_plot()
+
+
+class DraggablePlotTe(DraggablePlotTr):
+    """ A plot with draggable target """
+
+    class TargetPoint:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+    def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5., title="Draggable Plot", model=None, attack=None):
+        assert len(test_points) == 1
+        if attack:
+            self._attack = attack
+        else:
+            self._set_attack()
+        self._target_plot, self._target_point = None, None
+        super(DraggablePlotTe, self).__init__(points, test_points, domain, range, r, title, model)
+
+    def _update_radius(self, val):
+        self._r = val
+        self._set_attack()
+
+    def _set_attack(self):
+        X = np.array([point.init_x for point in self._points])
+        Y = np.array([point.init_y for point in self._points])
+        self._attack = TrTimeAttackOnX(X, Y, self._r, self._model)
+
+    def _update_plot(self):
+        if not self._test_points:
+            self._test_plot.set_data([], [])
+            self._curve.set_data([], [])
+        else:
+            init_X = np.array([point.init_x for point in self._points])
+            init_X = np.reshape(init_X, (init_X.shape[0], 1))
+            init_Y = np.array([point.init_y for point in self._points])
+
+            for test_point in self._test_points:
+                if test_point.init_y is None:
+                    test_point.init_y = self._model.forward(test_point.x, init_X, init_Y)
+                    test_point.y = test_point.init_y
+                    self._target_point = self.TargetPoint(x=test_point.init_x, y=test_point.init_y)
+                    changed_X = init_X
+                else:
+                    changed_X = self._attack.fit(self._target_point.x, self._target_point.y)
+                    test_point.x = self._target_point.x
+                    test_point.init_y = self._model.forward(test_point.x, init_X, init_Y)
+                    test_point.y = self._model.forward(test_point.x, changed_X, init_Y)
+
+                if not self._target_plot:
+                    self._target_plot, = self._axes.plot([self._target_point.x], [self._target_point.y], 'r*', markersize=9)
+                else:
+                    self._target_plot.set_data([self._target_point.x], [self._target_point.y])
+
+                # Add new plot
+                if not self._scatterplot:
+                    self._init_scatterplot, = self._axes.plot(init_X, init_Y, 'go', markersize=4)
+                    self._scatterplot, = self._axes.plot(changed_X, init_Y, 'ro', markersize=4)
+                # Update current plot
+                else:
+                    self._scatterplot.set_data(changed_X, init_Y)
+
+                # plot the local line that was being learned at the test x_input
+                x_plot = np.linspace(self._domain[0], self._domain[1], self._domain[1] - self._domain[0])
+                y_plot = np.array(self._model.get_local_line(test_point.x, init_X, init_Y, x_plot)).squeeze()
+
+                if not test_point.init_local_line:
+                    line, = self._axes.plot(x_plot, y_plot, 'g-', label=('local line before attack at x={}'.format(test_point.x)))
+                    test_point.init_local_line = line
+
+                y_plot = np.array(self._model.get_local_line(test_point.x, changed_X, init_Y, x_plot)).squeeze()
+
+                if not test_point.local_line:
+                    line, = self._axes.plot(x_plot, y_plot, 'r-', label=('local line after attack at x={}'.format(test_point.x)))
+                    test_point.local_line = line
+                else:
+                    test_point.local_line.set_data(x_plot, y_plot)
+
+                if not self._test_plot:
+                    self._init_pred_y, = self._axes.plot([test_point.x], [test_point.init_y], 'gx', markersize=7)
+                    self._test_plot, = self._axes.plot([test_point.x], [test_point.y], 'rx', markersize=7)
+                else:
+                    self._init_pred_y.set_data([test_point.x], [test_point.init_y])
+                    self._test_plot.set_data([test_point.x], [test_point.y])
+
+                x_plot = np.linspace(self._domain[0], self._domain[1], (self._domain[1] - self._domain[0]) * 2)
+                y_plot = np.array(self._model.get_curve(x_plot, changed_X, init_Y)).squeeze()
+
+                if not self._curve:
+                    self._curve, = self._axes.plot(x_plot, y_plot, 'r--')
+                    y_plot = np.array(self._model.get_curve(x_plot, init_X, init_Y)).squeeze()
+                    self._init_curve, = self._axes.plot(x_plot, y_plot, 'g--')
+                else:
+                    self._curve.set_data(x_plot, y_plot)
+
+            self._axes.legend(loc='best')
+            self._figure.canvas.draw()
+
+    def _edit_point(self, point, x, y=None):
+        if isinstance(x, MouseEvent):
+            x, y = x.xdata, x.ydata
+            point.x, point.y = x, y
+        else:
+            return
+
+    def _find_neighbor_point(self, event):
+        """ Find point around mouse position
+        :return: TePoint(x, y) if there are any point around mouse else None
+        """
+        distance_threshold = 1
+        x, y = self._target_point.x, self._target_point.y
+        distance = math.hypot(event.xdata - x, event.ydata - y)
+        if distance < distance_threshold:
+            return self._target_point
+        return None
+
+    def _on_click(self, event):
+        """ callback method for mouse click event
+        :type event: MouseEvent
+        """
+        # left click
+        if event.button == 1 and event.inaxes in [self._axes]:
+            point = self._find_neighbor_point(event)
+            if point:
+                self._dragging_point = point
+            self._update_plot()
+
+    def _on_release(self, event):
+        """ callback method for mouse release event
+        :type event: MouseEvent
+        """
+        if event.button == 1 and event.inaxes in [self._axes] and self._dragging_point:
+            self._dragging_point = None
+            self._update_plot()
+
+    def _on_motion(self, event):
+        """ callback method for mouse motion event
+        :type event: MouseEvent
+        """
+        if not self._dragging_point:
+            return
+        if event.xdata is None or event.ydata is None:
+            return
+        self._edit_point(self._dragging_point, event)
+        self._update_plot()
+
