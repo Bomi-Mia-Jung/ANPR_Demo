@@ -1,4 +1,7 @@
 """ code base courtesy of: https://github.com/yuma-m/matplotlib-draggable-plot/tree/master """
+import matplotlib
+# matplotlib.use('TkAgg')  # useful backend if you're using Windows
+from matplotlib.widgets import Slider
 
 import math
 import numpy as np
@@ -7,8 +10,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseEvent
 
 from lwlr import LWLR, GaussianKernel
-
-
 class DraggablePlot(object):
     """ An example of plot with draggable markers """
 
@@ -22,15 +23,20 @@ class DraggablePlot(object):
 
     class TePoint:
         def __init__(self, x, y, line):
+            self.init_x = x
+            self.init_y = y
             self.x = x
             self.y = y
             self.local_line = line
 
     def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5, title="Draggable Plot", model=None):
-        self._figure, self._axes, self._scatterplot, self._test_plot, self._curve, self._radius_circle = None, None, None, None, None, None
+        self._figure, self._axes, self._init_scatterplot, self._scatterplot, self._test_plot, self._init_curve, self._curve, self._radius_circle = None, None, None, None, None, None, None, None
 
         self._domain = domain
         self._range = range
+
+        self._radius_slider_axes = None
+        self._radius_slider = None
 
         self._r = float(r)
 
@@ -88,6 +94,19 @@ class DraggablePlot(object):
         self._figure.canvas.mpl_connect('button_release_event', self._on_release)
         self._figure.canvas.mpl_connect('motion_notify_event', self._on_motion)
 
+        self._radius_slider_axes = plt.axes([self._domain[0] + 0.15, self._range[0], 0.75, 0.04])
+                                        # ([slider_x, slider_y, slider_length, silder_thickness])
+        self._radius_slider = Slider(self._radius_slider_axes, 'Radius', 0.5, 6.0)
+        self._radius_slider.on_changed(self._update_radius)
+
+    def _update_radius(self, val):
+        self._r = val
+        if hasattr(self, '_radius_circle') and self._radius_circle:
+            self._radius_circle.set_radius(self._r)
+            # please leave self.r as argument of set_radius.
+            # without this set_radius function, the radius slider feature doesn't work!
+            self._figure.canvas.draw_idle()
+
     def _init_model(self):
         kernel = GaussianKernel
         self._model = LWLR(1, kernel, 2)
@@ -99,12 +118,17 @@ class DraggablePlot(object):
             for x_test in self._test_points:
                 x_test.local_line = None
         else:
+            init_X = []
+            init_Y = []
             X = [point.x for point in self._points]
             Y = [point.y for point in self._points]
 
             # Add new plot
             if not self._scatterplot:
-                self._scatterplot, = self._axes.plot(X, Y, 'o', markersize=4)
+                init_X = [point.init_x for point in self._points]
+                init_Y = [point.init_y for point in self._points]
+                self._init_scatterplot, = self._axes.plot(init_X, init_Y, 'go', markersize=4)
+                self._scatterplot, = self._axes.plot(X, Y, 'ro', markersize=4)
             # Update current plot
             else:
                 self._scatterplot.set_data(X, Y)
@@ -115,7 +139,11 @@ class DraggablePlot(object):
             y_plot = np.array(self._model.get_curve(x_plot, X, Y)).squeeze()
 
             if not self._curve:
-                self._curve, = self._axes.plot(x_plot, y_plot, '--')
+                self._curve, = self._axes.plot(x_plot, y_plot, 'r--')
+                init_X = np.array([[x] for x in init_X])
+                init_Y = np.array([[y] for y in init_Y])
+                y_plot = np.array(self._model.get_curve(x_plot, init_X, init_Y)).squeeze()
+                self._init_curve, = self._axes.plot(x_plot, y_plot, 'g--')
             else:
                 self._curve.set_data(x_plot, y_plot)
 
@@ -212,6 +240,7 @@ class DraggablePlot(object):
         """ callback method for mouse click event
         :type event: MouseEvent
         """
+
         # left click
         if event.button == 1 and event.inaxes in [self._axes]:
             point = self._find_neighbor_point(event)
@@ -232,6 +261,7 @@ class DraggablePlot(object):
         """ callback method for mouse release event
         :type event: MouseEvent
         """
+
         if event.button == 1 and event.inaxes in [self._axes] and self._dragging_point:
             self._dragging_point = None
             """
