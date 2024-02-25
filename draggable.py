@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseEvent
 
+# import personal modules
 from lwlr import LWLR, GaussianKernel
 from attack import TrTimeAttackOnX
 
@@ -25,7 +26,7 @@ class DraggablePlotTr(object):
                 self.y = float(y)
 
     class TePoint:
-        def __init__(self, x, y, line):
+        def __init__(self, x, y, line=None):
             self.init_x = x
             self.init_y = y
             self.x = x
