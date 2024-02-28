@@ -43,4 +43,4 @@ if __name__ == '__main__':
     Y = np.reshape(Y, (Y.size, 1))  # (n, 1)
     adversary = TrTimeAttackOnX(X, Y, r, model, lr=0.05, epochs=100)
 
-    te_plot = DraggablePlotTe(points=data, test_points=[25], r=r, domain=x_range, range=y_range, title="ANPR Draggable Target Points", model=model, attack=adversary)
+    te_plot = DraggablePlotTe(points=data, test_points=[25], r=r, domain=x_range, range=y_range, title="ANPR Draggable Target", model=model, attack=adversary)

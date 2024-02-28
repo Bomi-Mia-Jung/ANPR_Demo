@@ -1,6 +1,7 @@
 import numpy as np
 from lwlr import LWLR, GaussianKernel
 import autograd as ad
+from autograd.misc.optimizers import adam
 import math
 
 class TrTimeAttackOnX:
@@ -28,7 +29,7 @@ class TrTimeAttackOnX:
             grad_fn = ad.grad(self.loss, [2, 3])
             grad = grad_fn(x_target, y_target, self.x_delta, self.y_delta)
             pred = self.learner.forward(x_target, self.init_X+self.x_delta, self.init_Y+self.y_delta)
-            # print('Epoch %d/%d, Target y: %.4f, Current prediction: %.4f' % (epoch, self.epochs, y_target, pred))
+            print('Epoch %d/%d, Target y: %.4f, Current prediction: %.4f' % (epoch, self.epochs, y_target, pred))
 
             new_x_delta = self.x_delta - grad[0] * self.lr
             new_x_delta = np.where(np.abs(new_x_delta) <= self.r, new_x_delta, self.x_delta)
