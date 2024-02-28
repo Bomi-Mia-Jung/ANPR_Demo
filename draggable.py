@@ -101,7 +101,7 @@ class DraggablePlotTr(object):
 
         self._radius_slider_axes = plt.axes([self._domain[0] + 0.15, self._range[0], 0.75, 0.04])
                                         # ([slider_x, slider_y, slider_length, silder_thickness])
-        self._radius_slider = Slider(self._radius_slider_axes, 'Radius', 0.5, 6.0)
+        self._radius_slider = Slider(self._radius_slider_axes, 'Radius', self._r, self._r*2)
         self._radius_slider.on_changed(self._update_radius)
 
     def _update_radius(self, val):
@@ -316,7 +316,9 @@ class DraggablePlotTe(DraggablePlotTr):
 
     def _set_attack(self):
         X = np.array([point.init_x for point in self._points])
+        X = np.reshape(X, (X.size, 1))  # (n, d)
         Y = np.array([point.init_y for point in self._points])
+        Y = np.reshape(Y, (Y.size, 1))  # (n, 1)
         self._attack = TrTimeAttackOnX(X, Y, self._r, self._model)
 
     def _update_plot(self):
@@ -329,6 +331,8 @@ class DraggablePlotTe(DraggablePlotTr):
             init_Y = np.array([point.init_y for point in self._points])
 
             for test_point in self._test_points:
+                changed_X, changed_Y = [], []
+
                 if test_point.init_y is None:
                     test_point.init_y = self._model.forward(test_point.x, init_X, init_Y)
                     test_point.y = test_point.init_y
@@ -336,7 +340,7 @@ class DraggablePlotTe(DraggablePlotTr):
                     changed_X, changed_Y = [init_X], [init_Y]
                 else:
                     changed_X, changed_Y = [], []
-                    for i in range(3):
+                    for i in range(5):
                         changed_X_, changed_Y_ = self._attack.fit(self._target_point.x, self._target_point.y)
                         changed_X.append(changed_X_)
                         changed_Y.append(changed_Y_)
@@ -345,6 +349,8 @@ class DraggablePlotTe(DraggablePlotTr):
                     test_point.init_y = self._model.forward(test_point.x, init_X, init_Y)
                     test_point.y = self._model.forward(test_point.x, changed_X[0], changed_Y[0])
 
+                # print('length of changed_X:', len(changed_X))
+                # print('length of changed_X:', len(changed_Y))
                 x_plot = np.linspace(self._domain[0], self._domain[1], self._domain[1] - self._domain[0])
 
                 if not self._target_plot:
@@ -353,7 +359,7 @@ class DraggablePlotTe(DraggablePlotTr):
                         target_x = np.reshape(np.array([self._target_point.x]), newshape=(1, 1))
                         kernel_x_plot = np.reshape(x_plot, newshape=(x_plot.size, 1))
                         y_plot = self._model.kernel.get_weights(target_x, kernel_x_plot)
-                        self._target_point._kernel_curve, = self._axes.plot(x_plot, y_plot, 'm--', alpha=0.7)
+                        self._target_point._kernel_curve, = self._axes.plot(x_plot, y_plot, 'm--', alpha=0.7, label='kernel')
                 else:
                     self._target_plot.set_data([self._target_point.x], [self._target_point.y])
                     if self._target_point._plot_kernel and self._target_point._kernel_curve:
@@ -361,7 +367,6 @@ class DraggablePlotTe(DraggablePlotTr):
                         kernel_x_plot = np.reshape(x_plot, newshape=(x_plot.size, 1))
                         y_plot = self._model.kernel.get_weights(target_x, kernel_x_plot)
                         self._target_point._kernel_curve.set_data(x_plot, y_plot)
-
 
                 # Add new plot
                 if not self._scatterplot:
@@ -402,18 +407,22 @@ class DraggablePlotTe(DraggablePlotTr):
 
                 if not self._curve:
                     self._curve, = self._axes.plot(x_plot, y_plot, 'r--')
-                    self._curves = []
-                    print(len(changed_X))
-                    for i in range(len(changed_X)):
-                        y_plot = np.array(self._model.get_curve(x_plot, changed_X[i], changed_Y[i])).squeeze()
-                        curve_temp, = self._axes.plot(x_plot, y_plot, 'b--', alpha=0.5)
-                        self._curves.append(curve_temp)
                     y_plot = np.array(self._model.get_curve(x_plot, init_X, init_Y)).squeeze()
                     self._init_curve, = self._axes.plot(x_plot, y_plot, 'g--')
                 else:
                     self._curve.set_data(x_plot, y_plot)
+
+                if len(self._curves) == 0 or len(self._curves) == 1:
+                    self._curves = []
+                    for i in range(len(changed_X)):
+                        y_plot = np.array(self._model.get_curve(x_plot, changed_X[i], changed_Y[i])).squeeze()
+                        curve_temp, = self._axes.plot(x_plot, y_plot, 'b--', alpha=0.5)
+                        self._curves.append(curve_temp)
+                    # print('length of self._curves: ', len(self._curves))
+                else:
                     for i in range(len(self._curves)):
                         y_plot = np.array(self._model.get_curve(x_plot, changed_X[i], changed_Y[i])).squeeze()
+                        # print(i)
                         self._curves[i].set_data(x_plot, y_plot)
 
             self._axes.legend(loc='best')
