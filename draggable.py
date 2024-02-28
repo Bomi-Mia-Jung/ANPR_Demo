@@ -297,6 +297,8 @@ class DraggablePlotTe(DraggablePlotTr):
         def __init__(self, x, y):
             self.x = x
             self.y = y
+            self._plot_kernel = True  # should the kernel be plotted?
+            self._kernel_curve = None  # plot kernel values around target point
 
     def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5., title="Draggable Plot", model=None, attack=None):
         assert len(test_points) == 1
@@ -305,6 +307,7 @@ class DraggablePlotTe(DraggablePlotTr):
         else:
             self._set_attack()
         self._target_plot, self._target_point = None, None
+        self._curves = []
         super(DraggablePlotTe, self).__init__(points, test_points, domain, range, r, title, model)
 
     def _update_radius(self, val):
@@ -330,43 +333,62 @@ class DraggablePlotTe(DraggablePlotTr):
                     test_point.init_y = self._model.forward(test_point.x, init_X, init_Y)
                     test_point.y = test_point.init_y
                     self._target_point = self.TargetPoint(x=test_point.init_x, y=test_point.init_y)
-                    changed_X = init_X
+                    changed_X, changed_Y = [init_X], [init_Y]
                 else:
-                    changed_X = self._attack.fit(self._target_point.x, self._target_point.y)
+                    changed_X, changed_Y = [], []
+                    for i in range(3):
+                        changed_X_, changed_Y_ = self._attack.fit(self._target_point.x, self._target_point.y)
+                        changed_X.append(changed_X_)
+                        changed_Y.append(changed_Y_)
+
                     test_point.x = self._target_point.x
                     test_point.init_y = self._model.forward(test_point.x, init_X, init_Y)
-                    test_point.y = self._model.forward(test_point.x, changed_X, init_Y)
+                    test_point.y = self._model.forward(test_point.x, changed_X[0], changed_Y[0])
+
+                x_plot = np.linspace(self._domain[0], self._domain[1], self._domain[1] - self._domain[0])
 
                 if not self._target_plot:
                     self._target_plot, = self._axes.plot([self._target_point.x], [self._target_point.y], 'r*', markersize=9)
+                    if self._target_point._plot_kernel:
+                        target_x = np.reshape(np.array([self._target_point.x]), newshape=(1, 1))
+                        kernel_x_plot = np.reshape(x_plot, newshape=(x_plot.size, 1))
+                        y_plot = self._model.kernel.get_weights(target_x, kernel_x_plot)
+                        self._target_point._kernel_curve, = self._axes.plot(x_plot, y_plot, 'm--', alpha=0.7)
                 else:
                     self._target_plot.set_data([self._target_point.x], [self._target_point.y])
+                    if self._target_point._plot_kernel and self._target_point._kernel_curve:
+                        target_x = np.reshape(np.array([self._target_point.x]), newshape=(1, 1))
+                        kernel_x_plot = np.reshape(x_plot, newshape=(x_plot.size, 1))
+                        y_plot = self._model.kernel.get_weights(target_x, kernel_x_plot)
+                        self._target_point._kernel_curve.set_data(x_plot, y_plot)
+
 
                 # Add new plot
                 if not self._scatterplot:
                     self._init_scatterplot, = self._axes.plot(init_X, init_Y, 'go', markersize=4)
-                    self._scatterplot, = self._axes.plot(changed_X, init_Y, 'ro', markersize=4)
+                    self._scatterplot, = self._axes.plot(changed_X[0], changed_Y[0], 'ro', markersize=4)
                 # Update current plot
                 else:
-                    self._scatterplot.set_data(changed_X, init_Y)
+                    self._scatterplot.set_data(changed_X[0], changed_Y[0])
 
                 # plot the local line that was being learned at the test x_input
-                x_plot = np.linspace(self._domain[0], self._domain[1], self._domain[1] - self._domain[0])
                 y_plot = np.array(self._model.get_local_line(test_point.x, init_X, init_Y, x_plot)).squeeze()
 
                 if not test_point.init_local_line:
-                    line, = self._axes.plot(x_plot, y_plot, 'g-', label=('local line before attack at x={}'.format(test_point.x)))
+                    line, = self._axes.plot(x_plot, y_plot, 'g-', label=('local line before attack at x={:.2f}'.format(self._target_point.x)))
                     test_point.init_local_line = line
                 else:
                     test_point.init_local_line.set_data(x_plot, y_plot)
+                    test_point.init_local_line.set_label('local line before attack at x={:.2f}'.format(self._target_point.x))
 
-                y_plot = np.array(self._model.get_local_line(test_point.x, changed_X, init_Y, x_plot)).squeeze()
+                y_plot = np.array(self._model.get_local_line(test_point.x, changed_X[0], changed_Y[0], x_plot)).squeeze()
 
                 if not test_point.local_line:
-                    line, = self._axes.plot(x_plot, y_plot, 'r-', label=('local line after attack at x={}'.format(test_point.x)))
+                    line, = self._axes.plot(x_plot, y_plot, 'r-', label=('local line after attack at x={:.2f}'.format(self._target_point.x)))
                     test_point.local_line = line
                 else:
                     test_point.local_line.set_data(x_plot, y_plot)
+                    test_point.local_line.set_label('local line after attack at x={:.2f}'.format(self._target_point.x))
 
                 if not self._test_plot:
                     self._init_pred_y, = self._axes.plot([test_point.x], [test_point.init_y], 'gx', markersize=7)
@@ -376,14 +398,23 @@ class DraggablePlotTe(DraggablePlotTr):
                     self._test_plot.set_data([test_point.x], [test_point.y])
 
                 x_plot = np.linspace(self._domain[0], self._domain[1], (self._domain[1] - self._domain[0]) * 2)
-                y_plot = np.array(self._model.get_curve(x_plot, changed_X, init_Y)).squeeze()
+                y_plot = np.array(self._model.get_curve(x_plot, changed_X[0], changed_Y[0])).squeeze()
 
                 if not self._curve:
                     self._curve, = self._axes.plot(x_plot, y_plot, 'r--')
+                    self._curves = []
+                    print(len(changed_X))
+                    for i in range(len(changed_X)):
+                        y_plot = np.array(self._model.get_curve(x_plot, changed_X[i], changed_Y[i])).squeeze()
+                        curve_temp, = self._axes.plot(x_plot, y_plot, 'b--', alpha=0.5)
+                        self._curves.append(curve_temp)
                     y_plot = np.array(self._model.get_curve(x_plot, init_X, init_Y)).squeeze()
                     self._init_curve, = self._axes.plot(x_plot, y_plot, 'g--')
                 else:
                     self._curve.set_data(x_plot, y_plot)
+                    for i in range(len(self._curves)):
+                        y_plot = np.array(self._model.get_curve(x_plot, changed_X[i], changed_Y[i])).squeeze()
+                        self._curves[i].set_data(x_plot, y_plot)
 
             self._axes.legend(loc='best')
             self._figure.canvas.draw()

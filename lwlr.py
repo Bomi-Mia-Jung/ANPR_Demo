@@ -11,7 +11,7 @@ class LWLR(nn.Module):
         self.d = d
         self.lbda = lbda
         self.theta = np.zeros((d, 1))
-        self.kernel = kernel
+        self.kernel = kernel(sigma=bandwidth)
         self.bandwidth = bandwidth
 
     def forward(self, x_input, X, Y):
@@ -28,8 +28,10 @@ class LWLR(nn.Module):
         return self.theta.T @ x_input.T
 
     def get_weights(self, x_input, X):
-        kern_fn = self.kernel(mu=x_input, sigma=self.bandwidth)
-        W = kern_fn.get_weights(x_input, X)
+        N = X.shape[0]
+        W = self.kernel.get_weights(x_input, X)
+        W = np.diag(W)
+        W.reshape((N, N))
         return W
 
     def get_local_line(self, x_input, X, Y, domain):
@@ -42,7 +44,7 @@ class LWLR(nn.Module):
         # print('x_input shape after bias concat: ', x_input.shape)
 
         W = self.get_weights(x_input, X)
-        theta = np.linalg.inv(X.T@W@X)@(X.T@W@Y)
+        theta = np.linalg.solve(X.T@W@X + np.diag(self.lbda*np.ones((self.d+1,))), (X.T@W@Y))
         # print(theta)
         return [theta.T @ np.concatenate([np.ones((1, 1)), np.array([[x]])], axis=1).T for x in domain]
 
@@ -53,27 +55,22 @@ class LWLR(nn.Module):
         # print(X.shape)
         # print(W.shape)
         # print(Y.shape)
-        theta = np.linalg.inv(X.T@W@X + self.lbda*np.identity(self.d))@(X.T@W@Y)
+        theta = np.linalg.solve(X.T@W@X + np.diag(self.lbda*np.ones((self.d+1,))), (X.T@W@Y))
         self.theta = theta
         return self.theta
 
 
 class GaussianKernel:
-    def __init__(self, mu, sigma):
-        self.mu = mu
+    def __init__(self, sigma):
         self.sigma = sigma
 
     def get_weights(self, x_input, X):
         # x_input = (1, D)
-        # x = (N, D)
+        # X = (N, D)
         # N is the number of data samples in the training set
         # D is the dimensions of the data
-        # want to output (N, N)
-        N = X.shape[0]
-        x_input = np.repeat(x_input, N, axis=0)  # (N, D)
+        x_input = np.repeat(x_input, X.shape[0], axis=0)  # (N, D)
         weights = np.exp(-1.0*(np.linalg.norm(x_input-X, axis=1)**2)/(2*(self.sigma**2))).flatten()
-        weights = np.diag(weights)
-        weights.reshape((N, N))
         # print('shape of W: ', weights.shape)
         # weights = np.eye(N)
         return weights
