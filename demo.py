@@ -9,7 +9,7 @@ from matplotlib.backend_bases import MouseEvent
 
 
 # import personal modules
-from lwlr import LWLR, GaussianKernel
+from lwlr import LWLR, EpanechnikovKernel, TricubeKernel, LaplacianKernel, GaussianKernel, UniformKernel, AnovaRBFKernel, TriangularKernel
 from draggable import DraggablePlotTr, DraggablePlotTe
 from attack import TrTimeAttackOnX
 
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     data = tuple(zip(X, Y))
 
-    kernel = GaussianKernel  # kernel function to use for weights
+    kernel = TricubeKernel #GaussianKernel  # kernel function to use for weights
     model = LWLR(d, kernel, 2, lbda=0.1)  # initialize locally weighted lin reg model
 
     tr_plot = DraggablePlotTr(points=data, test_points=test_x, r=r, domain=x_range, range=y_range, title="ANPR Draggable Tr Set", model=model)
