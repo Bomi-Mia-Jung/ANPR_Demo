@@ -88,6 +88,7 @@ class AnovaRBFKernel:
         weights = np.exp(-1.0 * (distances ** 2) / (2 * (self.sigma ** 2)))  # Compute Gaussian weights
         return weights
 
+
 class TricubeKernel:
     def __init__(self, sigma):
         self.sigma = sigma
@@ -115,6 +116,8 @@ class EpanechnikovKernel:
         mask = distances <= 1  # Mask for distances within bandwidth
         weights = np.where(mask, 0.75 * (1 - distances ** 2), 0)  # Compute Epanechnikov weights
         return weights
+
+
 class TriangularKernel:
     def __init__(self, sigma):
         self.sigma = sigma
@@ -127,6 +130,8 @@ class TriangularKernel:
         distances = np.linalg.norm(x_input - X, axis=1) / self.sigma  # Compute distances normalized by bandwidth
         weights = np.where(distances <= 1, 1 - distances, 0)  # Compute Triangular weights
         return weights
+
+
 class LaplacianKernel:
     def __init__(self, sigma):
         self.sigma = sigma
@@ -139,6 +144,8 @@ class LaplacianKernel:
         distances = np.linalg.norm(x_input - X, axis=1)  # Compute Euclidean distances, shape: (N,)
         weights = np.exp(-1.0 * distances / self.sigma)  # Compute Laplacian weights
         return weights
+
+
 class UniformKernel:
     def __init__(self, sigma):
         self.sigma = sigma
@@ -149,6 +156,8 @@ class UniformKernel:
         # N is the number of data samples in the training set
         # D is the dimensions of the data
         return np.ones(X.shape[0])  # Uniform weights for all data points
+
+
 
 if __name__ == '__main__':
     d = 1
