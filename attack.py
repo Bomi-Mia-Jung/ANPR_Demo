@@ -1,7 +1,6 @@
 import numpy as np
 from lwlr import LWLR, GaussianKernel
 import autograd as ad
-from autograd.misc.optimizers import adam
 import math
 
 class TrTimeAttackOnX:
@@ -25,19 +24,36 @@ class TrTimeAttackOnX:
         self.y_delta = np.random.rand(self.y_delta.shape[0], self.y_delta.shape[1])
         # print(self.x_delta)  # check if random start is actually different every time
 
+        b1 = 0.9
+        b2 = 0.999
+        eps = 10 ** -8
+        m = np.zeros(self.x_delta.shape)
+        v = np.zeros(self.x_delta.shape)
+
         for epoch in range(self.epochs):
             grad_fn = ad.grad(self.loss, [2, 3])
             grad = grad_fn(x_target, y_target, self.x_delta, self.y_delta)
-            pred = self.learner.forward(x_target, self.init_X+self.x_delta, self.init_Y+self.y_delta)
-            print('Epoch %d/%d, Target y: %.4f, Current prediction: %.4f' % (epoch, self.epochs, y_target, pred))
+            grad = np.array(grad)
 
-            new_x_delta = self.x_delta - grad[0] * self.lr
+            # adam
+            m = (1 - b1) * grad + b1 * m  # first  moment estimate
+            v = (1 - b2) * (grad ** 2) + b2 * v  # second moment estimate
+            mhat = m / (1 - b1 ** (epoch + 1))  # bias correction?
+            vhat = v / (1 - b2 ** (epoch + 1))
+            delta = self.lr * mhat / (np.sqrt(vhat) + eps)
+            new_x_delta = self.x_delta - delta[0]
+            print(new_x_delta)
             new_x_delta = np.where(np.abs(new_x_delta) <= self.r, new_x_delta, self.x_delta)
-            new_y_delta = self.y_delta - grad[1] * self.lr
+            print(new_x_delta)
+            new_y_delta = self.y_delta - delta[1]
             new_y_delta = np.where(np.abs(new_y_delta) <= self.r, new_y_delta, self.y_delta)
+            print(new_y_delta)
 
             self.x_delta = new_x_delta
             self.y_delta = new_y_delta
+
+            pred = self.learner.forward(x_target, self.init_X+self.x_delta, self.init_Y+self.y_delta)
+            print('Epoch %d/%d, Target y: %.4f, Current prediction: %.4f' % (epoch, self.epochs, y_target, pred))
 
         return self.init_X + self.x_delta, self.init_Y + self.y_delta
 
@@ -50,7 +66,7 @@ if __name__ == '__main__':
 
     r = 6.
 
-    x_target, y_target = 2., 10.
+    x_target, y_target = 2., -10.
 
     model = LWLR(d=1, kernel=GaussianKernel, bandwidth=2, lbda=0.1)
     adversary = TrTimeAttackOnX(X, Y, r, model, lr=0.1, epochs=100)
