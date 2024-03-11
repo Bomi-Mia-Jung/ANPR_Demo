@@ -42,12 +42,11 @@ class TrTimeAttackOnX:
             vhat = v / (1 - b2 ** (epoch + 1))
             delta = self.lr * mhat / (np.sqrt(vhat) + eps)
             new_x_delta = self.x_delta - delta[0]
-            print(new_x_delta)
-            new_x_delta = np.where(np.abs(new_x_delta) <= self.r, new_x_delta, self.x_delta)
-            print(new_x_delta)
             new_y_delta = self.y_delta - delta[1]
-            new_y_delta = np.where(np.abs(new_y_delta) <= self.r, new_y_delta, self.y_delta)
-            print(new_y_delta)
+            diff = np.sqrt(np.square(new_x_delta)+np.square(new_y_delta))
+            new_x_delta = np.where(diff <= self.r, new_x_delta, self.x_delta)
+            new_y_delta = self.y_delta - delta[1]
+            new_y_delta = np.where(diff <= self.r, new_y_delta, self.y_delta)
 
             self.x_delta = new_x_delta
             self.y_delta = new_y_delta
