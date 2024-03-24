@@ -11,7 +11,7 @@ from matplotlib.backend_bases import MouseEvent
 
 # import personal modules
 from lwlr import LWLR, GaussianKernel
-from attack import TrTimeAttackOnX
+from attack import AttractiveAttackOnX
 
 
 class DraggablePlotTr(object):
@@ -319,7 +319,7 @@ class DraggablePlotTe(DraggablePlotTr):
         X = np.reshape(X, (X.size, 1))  # (n, d)
         Y = np.array([point.init_y for point in self._points])
         Y = np.reshape(Y, (Y.size, 1))  # (n, 1)
-        self._attack = TrTimeAttackOnX(X, Y, self._r, self._model)
+        self._attack = AttractiveAttackOnX(X, Y, self._r, self._model)
 
     def _update_plot(self):
         if not self._test_points:
