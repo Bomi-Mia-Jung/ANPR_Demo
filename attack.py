@@ -73,8 +73,8 @@ class RepulsiveAttackOnX:
         total_loss = 0.0
         for i in range(self.init_X.size):
             theta_x = self.learner.forward(self.init_X[i, :].item(), curr_X, curr_Y)
-            total_loss += (theta_x@self.init_X[i, :]-self.init_Y[i, 0])**2
-        return total_loss
+            total_loss -= (theta_x@self.init_X[i, :]-self.init_Y[i, 0])**2
+        return total_loss/self.init_X.shape[0]
 
     def fit(self):
         # trains the model for self.epochs number of epochs on the entire training set
@@ -142,8 +142,7 @@ if __name__ == '__main__':
     adversary = RepulsiveAttackOnX(X, Y, r, model, lr=0.1, epochs=100)
     changed_X, changed_Y = adversary.fit()
     print("X delta: ", adversary.x_delta)
-    # print("Y delta: ", adversary.y_delta)
-    # print("target y: ", y_target)
+    print("Y delta: ", adversary.y_delta)
     print("model original pred at x: ", model.forward(x_target, X, Y))
     print("model attacked pred at x: ", model.forward(x_target, changed_X, changed_Y))
 

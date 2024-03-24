@@ -2,12 +2,6 @@ import sys
 import numpy as np
 import math
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.lines import Line2D
-from matplotlib.backend_bases import MouseEvent
-
-
 # import personal modules
 from lwlr import LWLR, EpanechnikovKernel, TricubeKernel, LaplacianKernel, GaussianKernel, UniformKernel, AnovaRBFKernel, TriangularKernel
 from draggable import DraggablePlotTr, DraggablePlotTe
