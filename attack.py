@@ -69,13 +69,25 @@ class RepulsiveAttackOnX:
         self.y_delta = np.random.rand(Y.shape[0], Y.shape[1])
 
     def loss(self, x_delta, y_delta):
-        curr_X, curr_Y = self.init_X+x_delta, self.init_Y+y_delta
+        curr_X = self.init_X+x_delta
+        print(curr_X)
+        curr_X[0] = curr_X[0]+x_delta
+        print(curr_X)
+        curr_Y = self.init_Y+y_delta
+        # curr_X[0] = curr_Y[0]+y_delta
+
+        # print(self.init_Y.shape)
+        # print(self.init_Y[0, 0])
         # print(y_delta)
         total_loss = 0.0
+        loss_points = []
         for i in range(self.init_X.size):
-            output = self.learner.forward(self.init_X[i, :].item(), curr_X, curr_Y)
-            total_loss -= (output-self.init_Y[i, 0])**2
-        return total_loss/self.init_X.shape[0]
+            output = self.learner.forward(self.init_X[i, :].item(), curr_X, curr_Y).item()
+            loss = (output-self.init_Y[i, 0])**2
+            loss_points.append(-1 * loss)
+            total_loss -= loss
+            # print(total_loss)
+        return np.array(loss_points), total_loss/self.init_X.shape[0]
 
     def fit(self):
         # trains the model for self.epochs number of epochs on the entire training set
