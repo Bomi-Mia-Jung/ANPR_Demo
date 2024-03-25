@@ -3,7 +3,8 @@ from lwlr import LWLR, GaussianKernel
 import autograd as ad
 import math
 
-class AttractiveAttackOnX:
+
+class AttractiveTrTimeAttack:
     def __init__(self, X, Y, r, learner, lr=0.1, epochs=100):
         self.init_X, self.init_Y = X, Y  # initial data
         self.r = r  # limit on how much the attacker can change
@@ -56,7 +57,7 @@ class AttractiveAttackOnX:
         return self.init_X + self.x_delta, self.init_Y + self.y_delta
 
 
-class RepulsiveAttackOnX:
+class RepulsiveTrTimeAttack:
     def __init__(self, X, Y, r, learner, lr=0.1, epochs=100):
         self.init_X, self.init_Y = X, Y  # initial data
         # X = (n, d), Y = (n, 1)
@@ -152,7 +153,7 @@ if __name__ == '__main__':
     x_target = 5.
 
     model = LWLR(d=1, kernel=GaussianKernel, bandwidth=2, lbda=0.1)
-    adversary = RepulsiveAttackOnX(X, Y, r, model, lr=0.1, epochs=100)
+    adversary = RepulsiveTrTimeAttack(X, Y, r, model, lr=0.1, epochs=100)
     changed_X, changed_Y = adversary.fit()
     print("X delta: ", adversary.x_delta)
     print("Y delta: ", adversary.y_delta)

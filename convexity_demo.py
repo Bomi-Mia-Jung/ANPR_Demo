@@ -8,7 +8,7 @@ from matplotlib.ticker import LinearLocator
 
 # import personal modules
 from lwlr import LWLR, EpanechnikovKernel, TricubeKernel, LaplacianKernel, GaussianKernel, UniformKernel, AnovaRBFKernel, TriangularKernel
-from attack import RepulsiveAttackOnX
+from attack import RepulsiveTrTimeAttack
 
 
 def plot_x_convexity(adversary, lower_lim, upper_lim):
@@ -65,7 +65,7 @@ def plot_x_and_y_convexity(adversary, lower_lim, upper_lim):
 
     plt.show()
 
-
+:
 if __name__ == '__main__':
     X = np.array([1., 1., 2., 4., 4., 5., 10., 10., 11.])
     Y = np.array([1., 2., 1., 6., 7., 7., 3., 4., 3.5])
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     r = 6.
 
     model = LWLR(d=1, kernel=GaussianKernel, bandwidth=2, lbda=0.1)
-    adversary = RepulsiveAttackOnX(X, Y, r, model, lr=0.1, epochs=100)
+    adversary = RepulsiveTrTimeAttack(X, Y, r, model, lr=0.1, epochs=100)
 
     plot_x_convexity(adversary, -30, 30)
     plot_x_and_y_convexity(adversary, -30, 30)

@@ -5,7 +5,7 @@ import math
 # import personal modules
 from lwlr import LWLR, EpanechnikovKernel, TricubeKernel, LaplacianKernel, GaussianKernel, UniformKernel, AnovaRBFKernel, TriangularKernel
 from draggable import DraggablePlotTr, DraggablePlotTe
-from attack import AttractiveAttackOnX
+from attack import AttractiveTrTimeAttack
 
 
 if __name__ == '__main__':
@@ -38,6 +38,6 @@ if __name__ == '__main__':
     X = np.reshape(X, (X.size, 1))  # (n, d)
     Y = np.array(Y)
     Y = np.reshape(Y, (Y.size, 1))  # (n, 1)
-    adversary = AttractiveAttackOnX(X, Y, r, model, lr=0.1, epochs=100)
+    adversary = AttractiveTrTimeAttack(X, Y, r, model, lr=0.1, epochs=100)
 
     te_plot = DraggablePlotTe(points=data, test_points=[25], r=r, domain=x_range, range=y_range, title="ANPR Draggable Target", model=model, attack=adversary)
