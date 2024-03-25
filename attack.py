@@ -70,10 +70,11 @@ class RepulsiveAttackOnX:
 
     def loss(self, x_delta, y_delta):
         curr_X, curr_Y = self.init_X+x_delta, self.init_Y+y_delta
+        # print(y_delta)
         total_loss = 0.0
         for i in range(self.init_X.size):
-            theta_x = self.learner.forward(self.init_X[i, :].item(), curr_X, curr_Y)
-            total_loss -= (theta_x@self.init_X[i, :]-self.init_Y[i, 0])**2
+            output = self.learner.forward(self.init_X[i, :].item(), curr_X, curr_Y)
+            total_loss -= (output-self.init_Y[i, 0])**2
         return total_loss/self.init_X.shape[0]
 
     def fit(self):
