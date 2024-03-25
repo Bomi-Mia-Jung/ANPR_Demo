@@ -24,8 +24,11 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
     # Make data.
-    X = np.arange(-50, 50, 0.25)
-    Y = np.arange(-50, 50, 0.25)
+    X = np.arange(-10, 10, 0.25)
+    # X = X.reshape((1, X.size))
+    Y = np.arange(-10, 10, 0.25)
+    # Y = Y.reshape((1, Y.size))
+    # Y = np.zeros(Y.shape)
     X, Y = np.meshgrid(X, Y)
 
     Z = np.zeros(shape=X.shape)
