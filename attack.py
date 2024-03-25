@@ -70,9 +70,9 @@ class RepulsiveAttackOnX:
 
     def loss(self, x_delta, y_delta):
         curr_X = self.init_X+x_delta
-        print(curr_X)
-        curr_X[0] = curr_X[0]+x_delta
-        print(curr_X)
+        # print(curr_X)
+        # curr_X[0] = curr_X[0]+x_delta
+        # print(curr_X)
         curr_Y = self.init_Y+y_delta
         # curr_X[0] = curr_Y[0]+y_delta
 
