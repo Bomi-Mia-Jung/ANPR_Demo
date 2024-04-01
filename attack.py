@@ -73,15 +73,16 @@ class RepulsiveTrTimeAttack:
         self.x_delta = np.random.rand(X.shape[0], X.shape[1])
         self.y_delta = np.random.rand(Y.shape[0], Y.shape[1])
 
-    def loss(self, x_delta, y_delta):
+    def loss(self, x_delta, y_delta, change_all=False):
         curr_X = copy.copy(self.init_X)
-        curr_X[0] = curr_X[0] + x_delta
-        # curr_X = curr_X+x_delta
-
-        # print(curr_X)
         curr_Y = copy.copy(self.init_Y)
-        curr_Y[0] = curr_Y[0] + y_delta
-        # curr_Y = curr_Y+y_delta
+
+        if change_all:
+            curr_X = curr_X + x_delta
+            curr_Y = curr_Y + y_delta
+        else:
+            curr_X[0] = curr_X[0] + x_delta
+            curr_Y[0] = curr_Y[0] + y_delta
 
         # print(self.init_Y.shape)
         # print(self.init_Y[0, 0])

@@ -10,6 +10,8 @@ from sklearn.linear_model import (
     HuberRegressor,
     LinearRegression,
     RANSACRegressor,
+    Lasso,
+    Ridge
 )
 
 
@@ -44,7 +46,7 @@ if __name__ == '__main__':
     lbda = 0.1
 
     kernel = GaussianKernel  # kernel function to use for weights
-    regressors = {'OLS': LinearRegression(), 'Huber': HuberRegressor(), 'RANSAC': RANSACRegressor()}
+    regressors = {'OLS': LinearRegression(), 'Huber': HuberRegressor(), 'Lasso': Lasso(), 'Ridge': Ridge()}  # RANSAC': RANSACRegressor()}
     models = {'{}'.format(name): LWLR(d, kernel, regressor, bandwidth, lbda) for (name, regressor) in regressors.items()}  # initialize locally weighted lin reg model
 
     tr_plot = DraggablePlotTr(points=data, test_points=test_x, r=r, domain=x_range, range=y_range, title="ANPR Draggable Tr Set", models=models)
