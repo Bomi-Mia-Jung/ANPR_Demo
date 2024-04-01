@@ -1,52 +1,76 @@
+import copy
+
 import autograd.numpy as np
 import torch
 import torch.nn as nn
 import math
 import matplotlib.pyplot as plt
+from sklearn.linear_model import (
+    HuberRegressor,
+    LinearRegression,
+    RANSACRegressor,
+)
 
 
 class LWLR(nn.Module):
-    def __init__(self, d, kernel, bandwidth, lbda):
+    def __init__(self, d, kernel, regressor=None, bandwidth=2, lbda=0):
         super(LWLR, self).__init__()
         self.d = d
         self.lbda = lbda
         self.theta = np.zeros((d, 1))
         self.kernel = kernel(sigma=bandwidth)
+        self.regressor = regressor
         self.bandwidth = bandwidth
 
     def forward(self, x_input, X, Y):
-        X_bias = np.ones((X.shape[0], 1))
-        X = np.concatenate([X_bias, X], axis=1)
+        X, Y = copy.copy(X), copy.copy(Y)
+        N = X.shape[0]
+        X = X.reshape((N, 1))
 
-        x_input = np.array([[x_input]])
-        x_bias = np.ones((1, 1))
-        x_input = np.concatenate([x_bias, x_input], axis=1)
+        x_input = np.array([[x_input]])  # (1, 1)
         # print('x_input shape after bias concat: ', x_input.shape)
 
+        if self.regressor is None:
+            X_bias = np.ones((X.shape[0], 1))
+            X = np.concatenate([X_bias, X], axis=1)
+            x_bias = np.array([[1.0]])
+            x_input = np.concatenate([x_bias, x_input], axis=1)
+
+            W = self.get_weights(x_input, X)
+            theta = self.fit(X, Y, W)
+            return theta.T@x_input.T
         W = self.get_weights(x_input, X)
-        self.fit(X, Y, W)
-        return self.theta.T @ x_input.T
+        self.regressor = self.regressor.fit(X, Y, W)
+        return self.regressor.predict(x_input)
 
     def get_weights(self, x_input, X):
         N = X.shape[0]
         W = self.kernel.get_weights(x_input, X)
-        W = np.diag(W)
-        W.reshape((N, N))
+        if self.regressor is None:
+            W = np.diag(W)
+            W.reshape((N, N))
         return W
 
     def get_local_line(self, x_input, X, Y, domain):
-        X_bias = np.ones((X.shape[0], 1))
-        X = np.concatenate([X_bias, X], axis=1)
-
+        X = X.reshape((X.shape[0], 1))
         x_input = np.array([[x_input]])
-        x_bias = np.ones((1, 1))
-        x_input = np.concatenate([x_bias, x_input], axis=1)
         # print('x_input shape after bias concat: ', x_input.shape)
 
-        W = self.get_weights(x_input, X)
-        theta = np.linalg.solve(X.T@W@X + np.diag(self.lbda*np.ones((self.d+1,))), (X.T@W@Y))
-        # print(theta)
-        return [theta.T @ np.concatenate([np.ones((1, 1)), np.array([[x]])], axis=1).T for x in domain]
+        if self.regressor is None:
+            X_bias = np.ones(shape=X.shape)
+            X = np.concatenate([X_bias, X], axis=1)
+            x_bias = np.array([[1.0]])
+            x_input = np.concatenate([x_bias, x_input], axis=1)
+            W = self.get_weights(x_input, X)
+
+            theta = np.linalg.solve(X.T@W@X + np.diag(self.lbda*np.ones((self.d+1,))), (X.T@W@Y))
+            return [theta.T@np.concatenate([np.ones((1, 1)), np.array([[x]])], axis=1).T for x in domain]
+        else:
+            W = self.get_weights(x_input, X)
+            model = self.regressor.fit(X, Y, W)
+            return [model.predict(np.array([[x]])) for x in domain]
+            # theta = np.linalg.solve(X.T@W@X + np.diag(self.lbda*np.ones((self.d+1,))), (X.T@W@Y))
+            # print(theta)
 
     def get_curve(self, domain, X, Y):
         return [self.forward(x, X, Y) for x in domain]
@@ -169,7 +193,7 @@ if __name__ == '__main__':
     y_outputs = []
 
     kernel = GaussianKernel
-    model = LWLR(d, kernel, 2, lbda=0)
+    model = LWLR(d, kernel, HuberRegressor(), 2, lbda=0)
 
     for x_input in x_inputs:
         # print("input: ", x_input)

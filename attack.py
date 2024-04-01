@@ -1,7 +1,9 @@
-import numpy as np
+import autograd.numpy as np
 from lwlr import LWLR, GaussianKernel
 import autograd as ad
 import math
+import copy
+from sklearn.linear_model import LinearRegression
 
 
 class AttractiveTrTimeAttack:
@@ -11,18 +13,20 @@ class AttractiveTrTimeAttack:
         self.learner = learner  # the learner to attack
         self.lr = lr  # learning rate
         self.epochs = epochs  # how many epochs to train for
-        self.x_delta = np.random.rand(X.shape[0], X.shape[1])
-        self.y_delta = np.random.rand(Y.shape[0], Y.shape[1])
+        self.x_delta = np.random.rand(*[X.shape[i] for i in range(X.ndim)])
+        self.y_delta = np.random.rand(*[Y.shape[i] for i in range(Y.ndim)])
 
     def loss(self, x_target, y_target, x_delta, y_delta):
-        theta_x = self.learner.forward(x_target, self.init_X+x_delta, self.init_Y+y_delta)
+        theta_x = self.learner.forward(x_target, copy.copy(self.init_X)+x_delta, copy.copy(self.init_Y)+y_delta)
         return (1.0/2)*(theta_x-y_target)**2
 
     def fit(self, x_target, y_target):
         # trains the model for self.epochs number of epochs on the entire training set
+        x_target = copy.copy(x_target)
+        y_target = copy.copy(y_target)
 
-        self.x_delta = np.random.rand(self.x_delta.shape[0], self.x_delta.shape[1])  # random start
-        self.y_delta = np.random.rand(self.y_delta.shape[0], self.y_delta.shape[1])
+        self.x_delta = np.random.rand(*[self.x_delta.shape[i] for i in range(self.x_delta.ndim)])  # random start
+        self.y_delta = np.random.rand(*[self.y_delta.shape[i] for i in range(self.y_delta.ndim)])
         # print(self.x_delta)  # check if random start is actually different every time
 
         b1 = 0.9
@@ -70,12 +74,14 @@ class RepulsiveTrTimeAttack:
         self.y_delta = np.random.rand(Y.shape[0], Y.shape[1])
 
     def loss(self, x_delta, y_delta):
-        curr_X = self.init_X+x_delta
+        curr_X = copy.copy(self.init_X)
+        curr_X[0] = curr_X[0] + x_delta
+        # curr_X = curr_X+x_delta
+
         # print(curr_X)
-        # curr_X[0] = curr_X[0]+x_delta
-        # print(curr_X)
-        curr_Y = self.init_Y+y_delta
-        # curr_X[0] = curr_Y[0]+y_delta
+        curr_Y = copy.copy(self.init_Y)
+        curr_Y[0] = curr_Y[0] + y_delta
+        # curr_Y = curr_Y+y_delta
 
         # print(self.init_Y.shape)
         # print(self.init_Y[0, 0])
@@ -152,7 +158,7 @@ if __name__ == '__main__':
 
     x_target = 5.
 
-    model = LWLR(d=1, kernel=GaussianKernel, bandwidth=2, lbda=0.1)
+    model = LWLR(d=1, kernel=GaussianKernel, regressor=LinearRegression(), bandwidth=2, lbda=0.1)
     adversary = RepulsiveTrTimeAttack(X, Y, r, model, lr=0.1, epochs=100)
     changed_X, changed_Y = adversary.fit()
     print("X delta: ", adversary.x_delta)
