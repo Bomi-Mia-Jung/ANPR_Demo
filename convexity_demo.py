@@ -46,7 +46,7 @@ def plot_x_and_y_convexity(adversary, lower_lim, upper_lim):
 
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
-            _, loss = adversary.loss(X[i, j], Y[i, j])
+            _, loss = adversary.loss(X[i, j], Y[i, j], change_all=True)
             # print(loss)
             Z[i, j] = -1*loss
 
@@ -81,4 +81,4 @@ if __name__ == '__main__':
     adversary = RepulsiveTrTimeAttack(X, Y, r, model, lr=0.1, epochs=100)
 
     plot_x_convexity(adversary, -30, 30)
-    # plot_x_and_y_convexity(adversary, -30, 30)
+    plot_x_and_y_convexity(adversary, -30, 30)

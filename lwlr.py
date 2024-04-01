@@ -95,6 +95,7 @@ class GaussianKernel:
         # D is the dimensions of the data
         x_input = np.repeat(x_input, X.shape[0], axis=0)  # (N, D)
         weights = np.exp(-1.0*(np.linalg.norm(x_input-X, axis=1)**2)/(2*(self.sigma**2))).flatten()
+        # weights = np.ones(weights.shape)
         # print('shape of W: ', weights.shape)
         # weights = np.eye(N)
         return weights
