@@ -8,10 +8,17 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseEvent
+from sklearn.linear_model import LinearRegression
+from labellines import labelLines
 
 # import personal modules
 from lwlr import LWLR, GaussianKernel
 from attack import AttractiveTrTimeAttack
+
+
+########################################################################################################################
+############################################## Move training set #######################################################
+########################################################################################################################
 
 
 class DraggablePlotTr(object):
@@ -26,17 +33,18 @@ class DraggablePlotTr(object):
                 self.y = float(y)
 
     class TePoint:
-        def __init__(self, x, y, line=None):
+        def __init__(self, x, y=None, lines=None):
             self.init_x = x
             self.init_y = y
             self.x = x
             self.y = y
-            self.init_local_line = line
-            self.local_line = line
+            self.init_local_lines = lines
+            self.local_lines = lines
 
-    def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5, title="Draggable Plot", model=None):
-        self._figure, self._axes, self._init_scatterplot, self._scatterplot, self._test_plot, self._init_curve, self._curve, self._radius_circle = None, None, None, None, None, None, None, None
+    def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5, title="Draggable Plot", models=None):
+        self._figure, self._axes, self._init_scatterplot, self._scatterplot, self._test_plot, self._radius_circle = None, None, None, None, None, None
 
+        self._init_curves, self._curves = {}, {}
         self._domain = domain
         self._range = range
 
@@ -46,10 +54,10 @@ class DraggablePlotTr(object):
         self._r = float(r)
 
         self._title = title
-        if model:
-            self._model = model
+        if models:
+            self._models = models
         else:
-            self._init_model()
+            self._init_models()
 
         self._dragging_point = None
         if points:
@@ -61,12 +69,11 @@ class DraggablePlotTr(object):
         self._init_test_points(test_points)
         plt.show()
 
-
     def _init_test_points(self, test_points):
         self._test_points = []  # list of TestPoint instances
         if test_points:
             for x_input in test_points:
-                self._test_points.append(self.TePoint(x_input, None))
+                self._test_points.append(self.TePoint(x_input, {}, lines={}))
 
         self._update_plot()
 
@@ -94,13 +101,19 @@ class DraggablePlotTr(object):
         # axes.grid(which="both")
         axes.legend(loc='best')
         self._axes = axes
+        colors = ['m', 'c', 'g', 'b', 'r']
+        self._colors = {}
+        i = 0
+        for name in self._models.keys():
+            self._colors[name] = colors[i]
+            i += 1
 
         self._figure.canvas.mpl_connect('button_press_event', self._on_click)
         self._figure.canvas.mpl_connect('button_release_event', self._on_release)
         self._figure.canvas.mpl_connect('motion_notify_event', self._on_motion)
 
         self._radius_slider_axes = plt.axes([self._domain[0] + 0.15, self._range[0], 0.75, 0.04])
-                                        # ([slider_x, slider_y, slider_length, silder_thickness])
+                                         # ([slider_x, slider_y, slider_length, silder_thickness])
         self._radius_slider = Slider(self._radius_slider_axes, 'Radius', self._r, self._r*2)
         self._radius_slider.on_changed(self._update_radius)
 
@@ -112,16 +125,16 @@ class DraggablePlotTr(object):
             # without this set_radius function, the radius slider feature doesn't work!
             self._figure.canvas.draw_idle()
 
-    def _init_model(self):
+    def _init_models(self):
         kernel = GaussianKernel
-        self._model = LWLR(1, kernel, 2)
+        self._models = {'OLS': LWLR(1, kernel, LinearRegression(), 2, 0.1)}
 
     def _update_plot(self):
         if not self._points:
             self._scatterplot.set_data([], [])
             self._curve.set_data([], [])
             for x_test in self._test_points:
-                x_test.local_line = None
+                x_test.local_lines = {}
         else:
             init_X = []
             init_Y = []
@@ -141,41 +154,56 @@ class DraggablePlotTr(object):
             X = np.array([[x] for x in X])
             Y = np.array([[y] for y in Y])
             x_plot = np.linspace(self._domain[0], self._domain[1], (self._domain[1]-self._domain[0])*2)
-            y_plot = np.array(self._model.get_curve(x_plot, X, Y)).squeeze()
 
-            if not self._curve:
-                self._curve, = self._axes.plot(x_plot, y_plot, 'r--')
-                init_X = np.array([[x] for x in init_X])
-                init_Y = np.array([[y] for y in init_Y])
-                y_plot = np.array(self._model.get_curve(x_plot, init_X, init_Y)).squeeze()
-                self._init_curve, = self._axes.plot(x_plot, y_plot, 'g--')
+            if not self._curves:
+                for (name, model) in self._models.items():
+                    y_plot = np.array(model.get_curve(x_plot, X, Y)).squeeze()
+                    attk_curve, = self._axes.plot(x_plot, y_plot, '{}-'.format(self._colors[name]), label=name+' attacked')
+                    self._curves[name] = attk_curve
+                    init_X = np.array([x for x in init_X])
+                    init_Y = np.array([y for y in init_Y])
+                    y_plot = np.array(model.get_curve(x_plot, init_X, init_Y)).squeeze()
+                    init_curve, = self._axes.plot(x_plot, y_plot, '{}--'.format(self._colors[name]), label=name+' initial')
+                    self._init_curves[name] = init_curve
             else:
-                self._curve.set_data(x_plot, y_plot)
+                for (name, model) in self._models.items():
+                    y_plot = np.array(model.get_curve(x_plot, X, Y)).squeeze()
+                    self._curves[name].set_data(x_plot, y_plot)
 
             if self._test_points:
                 for test_point in self._test_points:
-                    test_point.y = self._model(test_point.x, X, Y).item()
+                    for (name, model) in self._models.items():
+                        test_point.y[name] = model(test_point.x, X, Y).item()
 
                     # plot the local line being learned at the test x_input
                     x_plot = np.linspace(self._domain[0], self._domain[1], self._domain[1] - self._domain[0])
-                    y_plot = np.array(self._model.get_local_line(test_point.x, X, Y, x_plot)).squeeze()
 
-                    if not test_point.local_line:
-                        line, = self._axes.plot(x_plot, y_plot, '-', label=('locally learned line at x={}'.format(test_point.x)))
-                        test_point.local_line = line
+                    if not test_point.local_lines:
+                        for (name, model) in self._models.items():
+                            y_plot = np.array(model.get_local_line(test_point.x, X, Y, x_plot)).squeeze()
+                            line, = self._axes.plot(x_plot, y_plot, '{}:'.format(self._colors[name]), label=('_locally learned {} at x={}'.format(name, test_point.x)))
+                            test_point.local_lines[name] = line
                     else:
-                        test_point.local_line.set_data(x_plot, y_plot)
+                        for (name, model) in self._models.items():
+                            y_plot = np.array(model.get_local_line(test_point.x, X, Y, x_plot)).squeeze()
+                            test_point.local_lines[name].set_data(x_plot, y_plot)
 
-                X_test = [test_point.x for test_point in self._test_points]
-                Y_test = [test_point.y for test_point in self._test_points]
+                X_test = []
+                Y_test = []
+                for test_point in self._test_points:
+                    for i in range(len(test_point.y)):
+                        X_test.append(test_point.x)
+                    for _ in test_point.y.values():
+                        Y_test.append(_)
 
                 if not self._test_plot:
                     self._test_plot, = self._axes.plot(X_test, Y_test, 'x', markersize=7)
                 else:
                     self._test_plot.set_data(X_test, Y_test)
-            self._axes.legend(loc='best')
-            self._figure.canvas.draw()
 
+            self._axes.legend(loc='best')
+            # labelLines([*self._init_curves.values(), *self._curves.values()])
+            self._figure.canvas.draw()
 
     def _add_point(self, x, y=None):
         if y is None:
@@ -290,6 +318,11 @@ class DraggablePlotTr(object):
         self._update_plot()
 
 
+########################################################################################################################
+############################################## Move target point #######################################################
+########################################################################################################################
+
+
 class DraggablePlotTe(DraggablePlotTr):
     """ A plot with draggable target """
 
@@ -300,6 +333,15 @@ class DraggablePlotTe(DraggablePlotTr):
             self._plot_kernel = True  # should the kernel be plotted?
             self._kernel_curve = None  # plot kernel values around target point
 
+    class TePoint:
+        def __init__(self, x, y=None, line=None):
+            self.init_x = x
+            self.init_y = y
+            self.x = x
+            self.y = y
+            self.init_local_line = line
+            self.local_line = line
+
     def __init__(self, points=None, test_points=None, domain=(0, 100), range=(0,100), r=5., title="Draggable Plot", model=None, attack=None):
         assert len(test_points) == 1
         if attack:
@@ -307,8 +349,25 @@ class DraggablePlotTe(DraggablePlotTr):
         else:
             self._set_attack()
         self._target_plot, self._target_point = None, None
-        self._curves = []
-        super(DraggablePlotTe, self).__init__(points, test_points, domain, range, r, title, model)
+        if model is None:
+            self._init_model()
+        else:
+            self._model = model
+        self._init_curve, self._curve = None, None
+        super(DraggablePlotTe, self).__init__(points, test_points, domain, range, r, title, models=None)
+        print('hello')
+
+    def _init_model(self):
+        kernel = GaussianKernel
+        self._model = LWLR(1, kernel, None, 2, 0.1)
+
+    def _init_test_points(self, test_points):
+        self._test_points = []  # list of TestPoint instances
+        if test_points:
+            for x_input in test_points:
+                self._test_points.append(self.TePoint(x_input, None, line=None))
+
+        self._update_plot()
 
     def _update_radius(self, val):
         self._r = val

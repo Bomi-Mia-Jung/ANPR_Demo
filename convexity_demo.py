@@ -5,6 +5,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
+from labellines import *
 
 # import personal modules
 from lwlr import LWLR, EpanechnikovKernel, TricubeKernel, LaplacianKernel, GaussianKernel, UniformKernel, AnovaRBFKernel, TriangularKernel
@@ -16,7 +17,7 @@ def plot_x_convexity(adversary, lower_lim, upper_lim):
     X = np.arange(lower_lim, upper_lim, 0.25)
     Y = np.arange(lower_lim, upper_lim, 0.25)
     Y = np.zeros(Y.shape)
-    print(Y)
+    # print(Y)
 
     Z = np.zeros(shape=X.shape)
 
@@ -28,9 +29,11 @@ def plot_x_convexity(adversary, lower_lim, upper_lim):
 
     all_loss_points = np.array(all_loss_points)
     for i in range(all_loss_points.shape[1]):
-        plt.plot(X, all_loss_points[:, i].flatten())
+        plt.plot(X, all_loss_points[:, i].flatten(), label='point {}'.format(i))
 
     plt.plot(X, Z)
+    # plt.legend(loc='best')
+    labelLines(plt.gca().get_lines(), zorder=2.5)
     plt.show()
 
 
@@ -78,4 +81,4 @@ if __name__ == '__main__':
     adversary = RepulsiveTrTimeAttack(X, Y, r, model, lr=0.1, epochs=100)
 
     plot_x_convexity(adversary, -30, 30)
-    plot_x_and_y_convexity(adversary, -30, 30)
+    # plot_x_and_y_convexity(adversary, -30, 30)
