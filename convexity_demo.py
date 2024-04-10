@@ -68,7 +68,7 @@ def plot_x_and_y_convexity(adversary, lower_lim, upper_lim):
 
     plt.show()
 
-
+:
 if __name__ == '__main__':
     X = np.array([1., 1., 2., 4., 4., 5., 10., 10., 11.])
     Y = np.array([1., 2., 1., 6., 7., 7., 3., 4., 3.5])
