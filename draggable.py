@@ -355,7 +355,6 @@ class DraggablePlotTe(DraggablePlotTr):
             self._model = model
         self._init_curve, self._curve = None, None
         super(DraggablePlotTe, self).__init__(points, test_points, domain, range, r, title, models=None)
-        print('hello')
 
     def _init_model(self):
         kernel = GaussianKernel
