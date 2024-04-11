@@ -1,5 +1,6 @@
 """ code base courtesy of: https://github.com/yuma-m/matplotlib-draggable-plot/tree/master """
 import matplotlib
+import numpy
 # matplotlib.use('TkAgg')  # useful backend if you're using Windows
 from matplotlib.widgets import Slider
 
@@ -136,56 +137,68 @@ class DraggablePlotTr(object):
             for x_test in self._test_points:
                 x_test.local_lines = {}
         else:
-            init_X = []
-            init_Y = []
-            X = [point.x for point in self._points]
-            Y = [point.y for point in self._points]
+            init_X = [point.init_x for point in self._points]
+            init_Y = [point.init_y for point in self._points]
+            attk_X = [point.x for point in self._points]
+            attk_Y = [point.y for point in self._points]
+            changed_X = []
+            changed_Y = []
+            for point in self._points:
+                for i in range(len(init_X)):
+                    if point.x == init_X[i]:
+                        if point.y == init_Y[i]:
+                            break
+                else:
+                    changed_X.append(point.x)
+                    changed_Y.append(point.y)
 
             # Add new plot
-            if not self._scatterplot:
-                init_X = [point.init_x for point in self._points]
-                init_Y = [point.init_y for point in self._points]
+            if not self._init_scatterplot:
                 self._init_scatterplot, = self._axes.plot(init_X, init_Y, 'go', markersize=4)
-                self._scatterplot, = self._axes.plot(X, Y, 'ro', markersize=4)
+            elif not self._scatterplot:
+                self._scatterplot, = self._axes.plot(changed_X, changed_Y, 'ro', markersize=4)
             # Update current plot
             else:
-                self._scatterplot.set_data(X, Y)
+                self._scatterplot.set_data(changed_X, changed_Y)
 
-            X = np.array([[x] for x in X])
-            Y = np.array([[y] for y in Y])
+            attk_X = np.array([[x] for x in attk_X])
+            attk_Y = np.array([[y] for y in attk_Y])
             x_plot = np.linspace(self._domain[0], self._domain[1], (self._domain[1]-self._domain[0])*2)
 
-            if not self._curves:
+            if not self._init_curves:
                 for (name, model) in self._models.items():
-                    y_plot = np.array(model.get_curve(x_plot, X, Y)).squeeze()
-                    attk_curve, = self._axes.plot(x_plot, y_plot, '{}-'.format(self._colors[name]), label=name+' attacked')
-                    self._curves[name] = attk_curve
                     init_X = np.array([x for x in init_X])
                     init_Y = np.array([y for y in init_Y])
                     y_plot = np.array(model.get_curve(x_plot, init_X, init_Y)).squeeze()
                     init_curve, = self._axes.plot(x_plot, y_plot, '{}--'.format(self._colors[name]), label=name+' initial')
                     self._init_curves[name] = init_curve
+            elif not self._curves:
+                for (name, model) in self._models.items():
+                    y_plot = np.array(model.get_curve(x_plot, attk_X, attk_Y)).squeeze()
+                    attk_curve, = self._axes.plot(x_plot, y_plot, '{}-'.format(self._colors[name]),
+                                                  label=name + ' attacked')
+                    self._curves[name] = attk_curve
             else:
                 for (name, model) in self._models.items():
-                    y_plot = np.array(model.get_curve(x_plot, X, Y)).squeeze()
+                    y_plot = np.array(model.get_curve(x_plot, attk_X, attk_Y)).squeeze()
                     self._curves[name].set_data(x_plot, y_plot)
 
             if self._test_points:
                 for test_point in self._test_points:
                     for (name, model) in self._models.items():
-                        test_point.y[name] = model(test_point.x, X, Y).item()
+                        test_point.y[name] = model(test_point.x, attk_X, attk_Y).item()
 
                     # plot the local line being learned at the test x_input
                     x_plot = np.linspace(self._domain[0], self._domain[1], self._domain[1] - self._domain[0])
 
                     if not test_point.local_lines:
                         for (name, model) in self._models.items():
-                            y_plot = np.array(model.get_local_line(test_point.x, X, Y, x_plot)).squeeze()
+                            y_plot = np.array(model.get_local_line(test_point.x, attk_X, attk_Y, x_plot)).squeeze()
                             line, = self._axes.plot(x_plot, y_plot, '{}:'.format(self._colors[name]), label=('_locally learned {} at x={}'.format(name, test_point.x)))
                             test_point.local_lines[name] = line
                     else:
                         for (name, model) in self._models.items():
-                            y_plot = np.array(model.get_local_line(test_point.x, X, Y, x_plot)).squeeze()
+                            y_plot = np.array(model.get_local_line(test_point.x, attk_X, attk_Y, x_plot)).squeeze()
                             test_point.local_lines[name].set_data(x_plot, y_plot)
 
                 X_test = []
@@ -261,7 +274,7 @@ class DraggablePlotTr(object):
         # Draw a red circle indicating the allowed movement radius around the point
         if point.init_x is None or point.init_y is None:
             return
-        
+
         if self._radius_circle is not None:
             self._radius_circle.remove()
         radius = self._r
