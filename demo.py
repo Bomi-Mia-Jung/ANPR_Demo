@@ -5,6 +5,7 @@ import math
 # import personal modules
 from lwlr import LWLR, EpanechnikovKernel, TricubeKernel, LaplacianKernel, GaussianKernel, UniformKernel, AnovaRBFKernel, TriangularKernel
 from draggable import DraggablePlotTr, DraggablePlotTe
+from sklearn.linear_model import LinearRegression
 from attack import AttractiveTrTimeAttack
 from sklearn.linear_model import (
     HuberRegressor,
