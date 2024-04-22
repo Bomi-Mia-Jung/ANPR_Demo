@@ -7,12 +7,13 @@ from sklearn.linear_model import LinearRegression
 
 
 class AttractiveTrTimeAttack:
-    def __init__(self, X, Y, r, learner, lr=0.1, epochs=100):
+    def __init__(self, X, Y, r, learner, lr=0.1, epochs=100, norm=2):
         self.init_X, self.init_Y = X, Y  # initial data
         self.r = r  # limit on how much the attacker can change
         self.learner = learner  # the learner to attack
         self.lr = lr  # learning rate
         self.epochs = epochs  # how many epochs to train for
+        self.norm = norm  # what norm to limit the attacker by
         self.x_delta = np.random.rand(*[X.shape[i] for i in range(X.ndim)])
         self.y_delta = np.random.rand(*[Y.shape[i] for i in range(Y.ndim)])
 
@@ -48,7 +49,10 @@ class AttractiveTrTimeAttack:
             delta = self.lr * mhat / (np.sqrt(vhat) + eps)
             new_x_delta = self.x_delta - delta[0]
             new_y_delta = self.y_delta - delta[1]
-            diff = np.sqrt(np.square(new_x_delta)+np.square(new_y_delta))
+            temp_x_delta = np.expand_dims(new_x_delta, axis=1)
+            temp_y_delta = np.expand_dims(new_y_delta, axis=1)
+            Z = np.concatenate([temp_x_delta, temp_y_delta], axis=1)
+            diff = np.linalg.norm(Z, ord=self.norm, axis=1)
             new_x_delta = np.where(diff <= self.r, new_x_delta, self.x_delta)
             new_y_delta = np.where(diff <= self.r, new_y_delta, self.y_delta)
 
@@ -62,7 +66,7 @@ class AttractiveTrTimeAttack:
 
 
 class RepulsiveTrTimeAttack:
-    def __init__(self, X, Y, r, learner, lr=0.1, epochs=100):
+    def __init__(self, X, Y, r, learner, lr=0.1, epochs=100, norm=2):
         self.init_X, self.init_Y = X, Y  # initial data
         # X = (n, d), Y = (n, 1)
 
@@ -70,6 +74,7 @@ class RepulsiveTrTimeAttack:
         self.learner = learner  # the learner to attack
         self.lr = lr  # learning rate
         self.epochs = epochs  # how many epochs to train for
+        self.norm = norm
         self.x_delta = np.random.rand(X.shape[0], X.shape[1])
         self.y_delta = np.random.rand(Y.shape[0], Y.shape[1])
 
@@ -123,7 +128,10 @@ class RepulsiveTrTimeAttack:
             delta = self.lr * mhat / (np.sqrt(vhat) + eps)
             new_x_delta = self.x_delta - delta[0]
             new_y_delta = self.y_delta - delta[1]
-            diff = np.sqrt(np.square(new_x_delta)+np.square(new_y_delta))
+            temp_x_delta = np.expand_dims(new_x_delta, axis=1)
+            temp_y_delta = np.expand_dims(new_y_delta, axis=1)
+            Z = np.concatenate([temp_x_delta, temp_y_delta], axis=1)
+            diff = np.linalg.norm(Z, ord=self.norm, axis=1)
             new_x_delta = np.where(diff <= self.r, new_x_delta, self.x_delta)
             new_y_delta = np.where(diff <= self.r, new_y_delta, self.y_delta)
 
